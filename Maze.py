@@ -135,8 +135,11 @@ class Maze(ProgramBase):
         self.sizeY = 0                          # cell size y
         self.direction = 'east'                 # current image direction
         self.imgMouses = {}                     # prepare 4 directions' mouse images 
+        self.imgCake = None
         self.imageTKMouse = None                # must hold the image object, otherwise will be released
+        self.imageTKCake = None                # must hold the image object, otherwise will be released
         self.mouseImgID = 0                     # mouse image widget
+        self.cakeImgID = 0 
         self.mousePos   = (0,0)                 # mouse current position, use to caculate the offset
         self.gameFinsihed = False
 
@@ -146,6 +149,7 @@ class Maze(ProgramBase):
         self.sizeY = self.height/self.map.rows
         self.drawMap()
         self.locateMouse()
+        self.locateCake()
 
     def drawDot(self, x, y, radius, color):
         centx, centy = (x*self.sizeX+self.sizeX/2, y*self.sizeY+self.sizeY/2)
@@ -163,7 +167,8 @@ class Maze(ProgramBase):
                 else:
                     radius = 2
                     if self.map.isEntry(x,y):
-                        color = 'blue'
+                        radius = 6
+                        color = 'red'
                     elif self.map.isExit(x,y):
                         color = 'red'
                     else:
@@ -174,17 +179,29 @@ class Maze(ProgramBase):
         for x in range (self.map.columns):
             for y in range (self.map.rows):
                 if self.map.isEntry(x,y):
-                    left, top = (x*self.sizeX, x*self.sizeY)  #top-left corner position
+                    left, top = (x*self.sizeX, y*self.sizeY)  #top-left corner position
                     cwd = os.getcwd()
                     path = os.path.join(cwd,'data/mouse.png')  
                     print(path)
-                    self.imageTKMouse = self.loadImage(path)
-                    self.mouseImgID = self.canvas.create_image(left, top, anchor='nw', image=self.imageTKMouse)
+                    self.imageTKMouse = self.loadMouseImage(path)
+                    self.mouseImgID = self.canvas.create_image(left+2, top+2, anchor='nw', image=self.imageTKMouse)
                     self.canvas.pack()
                     self.mazeMove.initState(x,y)
                     self.mousePos = (x,y)
 
-    def loadImage(self, path):
+    def locateCake(self):
+        for x in range (self.map.columns):
+            for y in range (self.map.rows):
+                if self.map.isExit(x,y):
+                    left, top = (x*self.sizeX, y*self.sizeY)  #top-left corner position
+                    cwd = os.getcwd()
+                    path = os.path.join(cwd,'data/cake.png')  
+                    print(path)
+                    self.imageTKCake = self.loadCakeImage(path)
+                    self.cakeImgID = self.canvas.create_image(left+16, top+10, anchor='nw', image=self.imageTKCake)
+                    self.canvas.pack()
+
+    def loadMouseImage(self, path):
         imgCV2 = cv2.imread(path, cv2.IMREAD_UNCHANGED)
         imgCV2 = cv2.cvtColor(imgCV2, cv2.COLOR_BGRA2RGBA)
         self.rows, self.cols = imgCV2.shape[:2]
@@ -193,6 +210,13 @@ class Maze(ProgramBase):
         self.imgMouses['north'] = self.rotateImage(imgCV2, 180, 1.0)
         self.imgMouses['west']  = self.rotateImage(imgCV2, -90, 1.0)
         return self.resizeAsTKImg(self.imgMouses['south'])
+    
+    def loadCakeImage(self, path):
+        self.imgCake = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        self.imgCake = cv2.cvtColor(self.imgCake, cv2.COLOR_BGRA2RGBA)
+        im = Image.fromarray(self.imgCake)              # convert to PIL image
+        im.thumbnail((im.width//20, im.height//20))     # resize by PIL
+        return ImageTk.PhotoImage(im) 
     
     def resizeAsTKImg(self, image):                     # input is CV2 image
         im = Image.fromarray(image)                     # convert to PIL image
@@ -235,7 +259,6 @@ class Maze(ProgramBase):
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
             self.nextStep()
         print('[{0}] exit'.format(threadName))
-        time.sleep(0.5)
         self.gameOVer()
 
     def nextStep(self):
@@ -247,10 +270,11 @@ class Maze(ProgramBase):
                 itemRoute = (self.reverseDir(itemRoute[0]), itemRoute[1], itemRoute[2])
                 self.mouseBackward(itemRoute)
                 itemRoute = self.mazeMove.lastRoute()
-            self.mouseForward(item)
             if self.map.isExit(item[2][0],item[2][1]):
                 self.threadEventMouse.set() # signal the thread loop to quit
                 self.gameFinsihed = True
+            else:
+                self.mouseForward(item)
                 
     def gameOVer(self):
         if self.gameFinsihed:
