@@ -3,6 +3,7 @@ import time
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
+from tkinter.constants import FALSE
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
@@ -21,7 +22,7 @@ class MazeThread (threading.Thread):
     def run(self):
         print('[{0}] starts, id={1}'.format(self.name, self.threadID))
         if self.threadID == THREAD_MOUSE_ID :
-            self.owner.move(self.name)
+            self.owner.moveThread(self.name)
 
 # action and info for moving
 class Map():
@@ -101,16 +102,14 @@ class MazeMove():
         return newCandidate
 
     def moveForward(self):
-        print('move forward')
         state = True
         item = None
         if len(self.candidatesStack) > 0:
             item = self.candidatesStack.pop()
             self.addCandidates(item[2][0],item[2][1])
             
-        print(self.candidatesStack)    
         if len(self.candidatesStack) == 0 :
-            print('No route to exit')
+            print('Map Error, no route to exit')
             state = False
         self.visited.append(item[2])
         return (state, item)
@@ -139,6 +138,7 @@ class Maze(ProgramBase):
         self.imageTKMouse = None                # must hold the image object, otherwise will be released
         self.mouseImgID = 0                     # mouse image widget
         self.mousePos   = (0,0)                 # mouse current position, use to caculate the offset
+        self.gameFinsihed = False
 
     def loadMap(self, path):
         self.map.loadMap(path)
@@ -212,7 +212,6 @@ class Maze(ProgramBase):
         x, y = pos
         offsetx = (x - self.mousePos[0]) * self.sizeX
         offsety = (y - self.mousePos[1]) * self.sizeY
-        print(offsetx, offsety)
         self.canvas.move(self.mouseImgID, offsetx, offsety)
 
     # override
@@ -231,11 +230,13 @@ class Maze(ProgramBase):
         self.threadEventMouse.clear()   # reset the thread event
         self.threadMouse.start()
     
-    def move(self, threadName):
+    def moveThread(self, threadName):
         while not self.threadEventMouse.wait(0.2):  # moving for every 200 ms
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
             self.nextStep()
         print('[{0}] exit'.format(threadName))
+        time.sleep(0.5)
+        self.gameOVer()
 
     def nextStep(self):
         state, item = self.mazeMove.moveForward()
@@ -248,9 +249,13 @@ class Maze(ProgramBase):
                 itemRoute = self.mazeMove.lastRoute()
             self.mouseForward(item)
             if self.map.isExit(item[2][0],item[2][1]):
-                messagebox.showinfo(title='Maze', message='Mission Completed')
                 self.threadEventMouse.set() # signal the thread loop to quit
-            
+                self.gameFinsihed = True
+                
+    def gameOVer(self):
+        if self.gameFinsihed:
+            messagebox.showinfo(title='Maze', message='Mission Completed')
+
     def mouseForward(self, item):
         print (item)
         if self.direction != item[0]: 
@@ -269,7 +274,6 @@ class Maze(ProgramBase):
         self.updateMousePos(item[1])
         self.mousePos = item[1]
         time.sleep(0.2)
-
 
     def reverseDir(self, dir):
         reverse = {'east':'west', 'west':'east', 'north':'south', 'south': 'north'}
