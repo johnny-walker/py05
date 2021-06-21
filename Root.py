@@ -9,8 +9,8 @@ class ProgramBase(tk.Frame):
         self.frame = self
 
         # configure window
-        x = 450
-        y = 150
+        x = 0
+        y = 0
         root.width = width
         root.height = height
         geometry = '{0:d}x{1:d}+{2:d}+{3:d}'.format(root.width+5, root.height+5, x, y) 
