@@ -64,7 +64,7 @@ class MazeMove():
         self.visited = []
 
     def initState(self, x, y):
-        # append route item (direction, parent, son)  
+        # append route item (direction, parent, child)  
         self.currentItem = (None, None, (x, y))
         self.mouseRoute.append(self.currentItem)
         self.addCandidates(x,y)
@@ -130,7 +130,8 @@ class Maze(ProgramBase):
 
         self.map = Map()                        # read csv file
         self.mazeMove = MazeMove(self.map)      # mouse moving algorithm
-        
+
+        self.walkSpeed = 0.15                    # interval for every step
         self.sizeX = 0                          # cell size x
         self.sizeY = 0                          # cell size y
         self.direction = 'east'                 # current image direction
@@ -255,7 +256,7 @@ class Maze(ProgramBase):
         self.threadMouse.start()
     
     def moveThread(self, threadName):
-        while not self.threadEventMouse.wait(0.2):  # moving for every 200 ms
+        while not self.threadEventMouse.wait(self.walkSpeed):  # moving for every 200 ms
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
             self.nextStep()
         print('[{0}] exit'.format(threadName))
@@ -285,7 +286,7 @@ class Maze(ProgramBase):
         if self.direction != item[0]: 
             self.direction = item[0]
             self.updateMouseImage(self.imgMouses[self.direction])
-        self.updateMousePos(item[2])
+        self.updateMousePos(item[2])    # step forward from child info
         self.mousePos = item[2]
         self.mazeMove.mouseRoute.append(item)
         self.mazeMove.currentItem = item
@@ -295,9 +296,9 @@ class Maze(ProgramBase):
         if self.direction != item[0]: 
             self.direction = item[0]
             self.updateMouseImage(self.imgMouses[self.direction])
-        self.updateMousePos(item[1])
+        self.updateMousePos(item[1])    # step backword from parent info
         self.mousePos = item[1]
-        time.sleep(0.2)
+        time.sleep(self.walkSpeed)
 
     def reverseDir(self, dir):
         reverse = {'east':'west', 'west':'east', 'north':'south', 'south': 'north'}
