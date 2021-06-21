@@ -184,7 +184,7 @@ class Maze(ProgramBase):
                     path = os.path.join(cwd,'data/mouse.png')  
                     print(path)
                     self.imageTKMouse = self.loadMouseImage(path)
-                    self.mouseImgID = self.canvas.create_image(left+2, top+2, anchor='nw', image=self.imageTKMouse)
+                    self.mouseImgID = self.canvas.create_image(left+6, top+2, anchor='nw', image=self.imageTKMouse)
                     self.canvas.pack()
                     self.mazeMove.initState(x,y)
                     self.mousePos = (x,y)
@@ -198,7 +198,7 @@ class Maze(ProgramBase):
                     path = os.path.join(cwd,'data/cake.png')  
                     print(path)
                     self.imageTKCake = self.loadCakeImage(path)
-                    self.cakeImgID = self.canvas.create_image(left+16, top+10, anchor='nw', image=self.imageTKCake)
+                    self.cakeImgID = self.canvas.create_image(left+13, top+10, anchor='nw', image=self.imageTKCake)
                     self.canvas.pack()
 
     def loadMouseImage(self, path):
