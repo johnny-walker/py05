@@ -7,9 +7,11 @@ from tkinter.constants import FALSE
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
-import csv
 import threading
+
 from Root import ProgramBase
+from MazeMap import Map
+from MazeCtrl import MazeMove
 
 THREAD_MOUSE_ID = 1    
 class MazeThread (threading.Thread):
@@ -23,97 +25,6 @@ class MazeThread (threading.Thread):
         print('[{0}] starts, id={1}'.format(self.name, self.threadID))
         if self.threadID == THREAD_MOUSE_ID :
             self.owner.moveThread(self.name)
-
-# action and info for moving
-class Map():
-    def __init__(self):
-        self.info = []
-        self.rows = 0
-        self.columns = 0
-
-    def loadMap(self, filepath):
-        with open(filepath, newline='') as csvfile:
-            rows = csv.reader(csvfile)
-            for row in rows:
-                print(row)
-                self.info.append(row)
-        self.rows = len(self.info)
-        self.columns = len(self.info[0])
-        print('map rows = {0}, columns = {1}'.format(self.rows, self.columns))
-    
-    def isBlock(self, x, y):
-        block = True
-        if x in range(0,self.columns) and y in range(0,self.rows):
-            block = self.info[y][x] == '0'
-        return block
-        
-    def isEntry(self, x, y):
-        return self.info[y][x] == '2'
-
-    def isExit(self, x, y):
-        return self.info[y][x] == '3'
-        
-
-# movement algorithm
-class MazeMove():
-    def __init__(self, maze):
-        self.mouseRoute = []
-        self.candidatesStack = []
-        self.maze = maze
-        self.currentItem = None
-        self.visited = []
-
-    def initState(self, x, y):
-        # append route item (direction, parent, child)  
-        self.currentItem = (None, None, (x, y))
-        self.mouseRoute.append(self.currentItem)
-        self.addCandidates(x,y)
-        self.visited.append((x,y))
-
-    def popRoute(self):
-        return self.mouseRoute.pop()
-
-    def lastRoute(self):
-        return self.mouseRoute[-1]
-
-    def canWalk(self, x, y):
-        if (x,y) in self.visited:
-                return False
-        return not self.maze.isBlock(x, y)
-
-    def addCandidates(self, x, y):
-        newCandidate = False
-        if self.canWalk(x+1, y):  
-            item = ('east', (x, y), (x+1, y))
-            self.candidatesStack.append(item)
-            newCandidate = True
-        if self.canWalk(x, y+1): 
-            item = ('south', (x, y), (x, y+1))
-            self.candidatesStack.append(item)
-            newCandidate = True
-        if self.canWalk(x-1, y): 
-            item = ('west', (x, y), (x-1, y))
-            self.candidatesStack.append(item)
-            newCandidate = True
-        if self.canWalk(x, y-1): 
-            item = ('north', (x, y), (x, y-1))
-            self.candidatesStack.append(item)
-            newCandidate = True
-        return newCandidate
-
-    def moveForward(self):
-        state = True
-        item = None
-        if len(self.candidatesStack) > 0:
-            item = self.candidatesStack.pop()
-            self.addCandidates(item[2][0],item[2][1])
-            
-        if len(self.candidatesStack) == 0 :
-            print('Map Error, no route to exit')
-            state = False
-        self.visited.append(item[2])
-        return (state, item)
-
 
 class Maze(ProgramBase):
     threadEventMouse = threading.Event()
@@ -137,16 +48,12 @@ class Maze(ProgramBase):
         self.direction = 'east'                 # current image direction
         self.imgMouses = {}                     # prepare 4 directions' mouse images 
         
-        self.imgHome = None                     # must hold the image object, otherwise will be released
-        self.imgCake = None                     # must hold the image object, otherwise will be released
-        self.imgBlock = None                    # must hold the image object, otherwise will be released
-
         self.imageTKMouse = None                # must hold the image object, otherwise will be released
         self.imageTKHome = None                 # must hold the image object, otherwise will be released
         self.imageTKCake = None                 # must hold the image object, otherwise will be released
         self.imageTKBlock = None                # must hold the image object, otherwise will be released
-        self.mouseImgID = 0                     # mouse image widget
 
+        self.mouseImgID = 0                     # mouse image widget
         self.mousePos   = (0,0)                 # mouse current position, use to caculate the offset
         self.gameFinsihed = False
         self.isHomeDrawn = False
@@ -159,13 +66,13 @@ class Maze(ProgramBase):
         self.loadMouseImage(path)
 
         path = os.path.join(cwd,'data/home.png')  
-        self.loadHomeImage(path)
+        self.imageTKHome = self.loadImage(path, 50)
 
         path = os.path.join(cwd,'data/cake.png')  
-        self.loadCakeImage(path)
+        self.imageTKCake = self.loadImage(path, 18)
 
         path = os.path.join(cwd,'data/block.png')  
-        self.loadBlockImage(path)
+        self.imageTKBlock = self.loadImage(path, 22.7)
 
     def loadMouseImage(self, path):
         imgCV2 = cv2.imread(path, cv2.IMREAD_UNCHANGED)
@@ -177,29 +84,12 @@ class Maze(ProgramBase):
         self.imgMouses['west']  = self.rotateImage(imgCV2, -90, 1.0)
         self.imageTKMouse = self.resizeAsTKImg(self.imgMouses['south'])
 
-    def loadHomeImage(self, path):
-        scale = 50
-        self.imgHome = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-        self.imgHome = cv2.cvtColor(self.imgHome, cv2.COLOR_BGRA2RGBA)
-        im = Image.fromarray(self.imgHome)              # convert to PIL image
+    def loadImage(self, path, scale):
+        imgCake = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        imgCake = cv2.cvtColor(imgCake, cv2.COLOR_BGRA2RGBA)
+        im = Image.fromarray(imgCake)              # convert to PIL image
         im.thumbnail((im.width//scale, im.height//scale))     # resize by PIL
-        self.imageTKHome =  ImageTk.PhotoImage(im) 
-
-    def loadCakeImage(self, path):
-        scale = 18
-        self.imgCake = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-        self.imgCake = cv2.cvtColor(self.imgCake, cv2.COLOR_BGRA2RGBA)
-        im = Image.fromarray(self.imgCake)              # convert to PIL image
-        im.thumbnail((im.width//scale, im.height//scale))     # resize by PIL
-        self.imageTKCake =  ImageTk.PhotoImage(im) 
-
-    def loadBlockImage(self, path):
-        scale = 22.7
-        self.imgBlock = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-        self.imgBlock = cv2.cvtColor(self.imgBlock, cv2.COLOR_BGRA2RGBA)
-        im = Image.fromarray(self.imgBlock)              # convert to PIL image
-        im.thumbnail((im.width//scale, im.height//scale))     # resize by PIL
-        self.imageTKBlock =  ImageTk.PhotoImage(im) 
+        return ImageTk.PhotoImage(im) 
 
     def loadMap(self, path):
         self.map.loadMap(path)
@@ -218,31 +108,30 @@ class Maze(ProgramBase):
                     self.drawMouse(x,y)
                 #else:
                 #    self.drawDot(x, y, 2, 'yellow')
-    
-    def drawMouse(self,x,y):
+                
+    def drawImage(self, tkimg, x, y, offsetx, offsety):
         left, top = (x*self.sizeX, y*self.sizeY)  #top-left corner position
-        self.mouseImgID = self.canvas.create_image(left+6, top+2, anchor='nw', image=self.imageTKMouse)
+        id =  self.canvas.create_image(left+offsetx, top+offsety, anchor='nw', image=tkimg)
+        self.canvas.pack()
+        return id
+
+    def drawMouse(self, x, y):
+        self.mouseImgID = self.drawImage(self.imageTKMouse, x, y, 6, 2)
         self.canvas.pack()
         self.mazeMove.initState(x,y)
         self.mousePos = (x,y)
 
-    def drawHome(self,x,y):
+    def drawHome(self, x, y):
         # only draw once after first moving
         if not self.isHomeDrawn:
-            left, top = (x*self.sizeX, y*self.sizeY)  #top-left corner position
-            self.canvas.create_image(left+12, top+10, anchor='nw', image=self.imageTKHome)
-            self.canvas.pack()
+            self.drawImage(self.imageTKHome, x, y, 12, 10)
             self.isHomeDrawn = True
 
-    def drawCake(self,x,y):
-        left, top = (x*self.sizeX, y*self.sizeY)  #top-left corner position
-        self.canvas.create_image(left+13, top+10, anchor='nw', image=self.imageTKCake)
-        self.canvas.pack()
+    def drawCake(self, x, y):
+        self.drawImage(self.imageTKCake, x, y, 13, 10)
     
-    def drawBlock(self,x,y):
-        left, top = (x*self.sizeX, y*self.sizeY)  #top-left corner position
-        self.canvas.create_image(left+5, top+3, anchor='nw', image=self.imageTKBlock)
-        self.canvas.pack()
+    def drawBlock(self, x, y):
+        self.drawImage(self.imageTKBlock, x, y, 5, 3)
    
     def drawDot(self, x, y, radius, color):
         centx, centy = (x*self.sizeX+self.sizeX/2, y*self.sizeY+self.sizeY/2)
@@ -321,7 +210,6 @@ class Maze(ProgramBase):
         self.mousePos = item[2]
         self.mazeMove.mouseRoute.append(item)
         self.mazeMove.currentItem = item
-
 
     def mouseBackward(self, item):
         print (item)
