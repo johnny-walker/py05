@@ -1,11 +1,8 @@
 # https://www.rs-online.com/designspark/python-tkinter-cn#_Toc61529922
 import os
 import tkinter as tk
-from tkinter import filedialog
 from PIL import Image, ImageTk
 import cv2
-import numpy as np
-import time
 import threading
 from Root import ProgramBase
 
@@ -21,7 +18,7 @@ class MazeThread (threading.Thread):
     def run(self):
         print('[{0}] starts, id={1}'.format(self.name, self.threadID))
         if self.threadID == THREAD_MOUSE_ID :
-            self.owner.move(self.name)
+            self.owner.funcThread(self.name)
 
 class Pgm05(ProgramBase):
     threadEventMouse = threading.Event()
@@ -29,15 +26,17 @@ class Pgm05(ProgramBase):
     
     def __init__(self, root, path, width=640, height=480):
         super().__init__(root, width, height)
-        self.root.title('Canvas')
-
+        self.root.title('mouse moving')
         self.canvas = tk.Canvas(self.root, bg = "gray", width=width, height=height)
         self.canvas.pack()
+        self.mousePosX = 50
+        self.mousePosY = 50
+
         self.imgCV2 = None
         self.rows = 0
         self.cols = 0
         self.imgTK = self.loadImage('data/mouse.png')
-        self.mouseImgID = self.canvas.create_image(100, 100, anchor = 'nw', image = self.imgTK)
+        self.mouseImgID = self.canvas.create_image(self.mousePosX, self.mousePosY, anchor = 'nw', image = self.imgTK)
         self.root.update()
     
     def loadImage(self, path):
@@ -76,12 +75,24 @@ class Pgm05(ProgramBase):
         self.threadEventMouse.clear()   # reset the thread event
         self.threadMouse.start()
     
-    def move(self, threadName):
-        while not self.threadEventMouse.wait(0.2):  # moving for every 100 ms
+    
+    def funcThread(self, threadName):
+        while not self.threadEventMouse.wait(0.3):  # moving for every 100 ms
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
-            self.rotateImage(45, 1.0)
-            self.updateMouseImage()
+            self.mouseForward()
         print('[{0}] exit'.format(threadName))
+    
+    def mouseForward(self):
+        if self.mousePosX + 50 < self.root.width - 100:
+            offsetx = 50  
+            self.mousePosX += 50
+        else:
+            offsetx = 50 - self.mousePosX 
+            self.mousePosX = 50
+
+        print (self.mousePosX, offsetx)
+        self.canvas.move(self.mouseImgID, offsetx, 0)     
+
 
 if __name__ == '__main__':
     cwd = os.getcwd()

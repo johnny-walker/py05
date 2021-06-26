@@ -1,12 +1,9 @@
 import os
 import time
 import tkinter as tk
-from tkinter import filedialog
 from tkinter import messagebox
-from tkinter.constants import FALSE
 from PIL import Image, ImageTk
 import cv2
-import numpy as np
 import threading
 
 from Root import ProgramBase
@@ -24,7 +21,7 @@ class MazeThread (threading.Thread):
     def run(self):
         print('[{0}] starts, id={1}'.format(self.name, self.threadID))
         if self.threadID == THREAD_MOUSE_ID :
-            self.owner.moveThread(self.name)
+            self.owner.funcThread(self.name)
 
 class Maze(ProgramBase):
     threadEventMouse = threading.Event()
@@ -35,14 +32,14 @@ class Maze(ProgramBase):
         # init UI
         self.width = width
         self.height = height
-        self.root.title('老鼠覓食')
+        self.root.title('老鼠覓食') 
         self.canvas = tk.Canvas(self.root, bg = "gray", width=width, height=height)
         self.canvas.pack()
 
         self.map = Map()                        # read csv file
         self.mazeMove = MazeMove(self.map)      # mouse moving algorithm
 
-        self.walkSpeed = 0.18                    # interval for every step
+        self.walkSpeed = 0.3                    # interval for every step
         self.sizeX = 0                          # cell size x
         self.sizeY = 0                          # cell size y
         self.direction = 'east'                 # current image direction
@@ -174,7 +171,7 @@ class Maze(ProgramBase):
         self.threadEventMouse.clear()   # reset the thread event
         self.threadMouse.start()
     
-    def moveThread(self, threadName):
+    def funcThread(self, threadName):
         while not self.threadEventMouse.wait(self.walkSpeed):  # moving for every 200 ms
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
             self.nextStep()
