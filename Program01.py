@@ -55,10 +55,6 @@ class Pgm05(ProgramBase):
         matrix2D = cv2.getRotationMatrix2D(((self.cols-1)/2.0, (self.rows-1)/2.0), angle, scale)
         self.imgCV2 = cv2.warpAffine(self.imgCV2, matrix2D, (self.cols, self.rows))
 
-    def updateMouseImage(self):
-        self.imageTKMouse = self.resizeAsTKImg()
-        self.canvas.itemconfig(self.mouseImgID, image=self.imageTKMouse)
-
     # override
     def onKey(self, event):
         if event.char == event.keysym or len(event.char) == 1:
@@ -77,7 +73,7 @@ class Pgm05(ProgramBase):
     
     
     def funcThread(self, threadName):
-        while not self.threadEventMouse.wait(0.3):  # moving for every 100 ms
+        while not self.threadEventMouse.wait(0.1):  # moving for every 300 ms
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
             self.mouseForward()
         print('[{0}] exit'.format(threadName))

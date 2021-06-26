@@ -55,46 +55,14 @@ class Maze(ProgramBase):
         self.gameFinsihed = False
         self.isHomeDrawn = False
 
-        self.loadImages()
-
-    def loadImages(self):
-        cwd = os.getcwd()
-        path = os.path.join(cwd,'data/mouse.png')  
-        self.loadMouseImage(path)
-
-        path = os.path.join(cwd,'data/home.png')  
-        self.imageTKHome = self.loadImage(path, 50)
-
-        path = os.path.join(cwd,'data/cake.png')  
-        self.imageTKCake = self.loadImage(path, 18)
-
-        path = os.path.join(cwd,'data/block.png')  
-        self.imageTKBlock = self.loadImage(path, 22.7)
-
-    def loadMouseImage(self, path):
-        imgCV2 = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-        imgCV2 = cv2.cvtColor(imgCV2, cv2.COLOR_BGRA2RGBA)
-        self.rows, self.cols = imgCV2.shape[:2]
-        self.imgMouses['south'] = imgCV2 = self.rotateImage(imgCV2, 0, 0.8)
-        self.imgMouses['east']  = self.rotateImage(imgCV2,  90, 1.0)
-        self.imgMouses['north'] = self.rotateImage(imgCV2, 180, 1.0)
-        self.imgMouses['west']  = self.rotateImage(imgCV2, -90, 1.0)
-        self.imageTKMouse = self.resizeAsTKImg(self.imgMouses['south'])
-
-    def loadImage(self, path, scale):
-        imgCake = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-        imgCake = cv2.cvtColor(imgCake, cv2.COLOR_BGRA2RGBA)
-        im = Image.fromarray(imgCake)                               # convert to PIL image
-        im.thumbnail((im.width//scale, im.height//scale))           # resize by PIL
-        return ImageTk.PhotoImage(im) 
-
     def loadMap(self, path):
         self.map.loadMap(path)
         self.sizeX = self.width/self.map.columns
         self.sizeY = self.height/self.map.rows
         self.drawMap()
-
+    
     def drawMap(self):
+        self.loadImages()
         for x in range (self.map.columns):
             for y in range (self.map.rows):
                 if self.map.isBlock(x,y):
@@ -105,7 +73,41 @@ class Maze(ProgramBase):
                     self.drawMouse(x,y)
                 #else:
                 #    self.drawDot(x, y, 2, 'yellow')
-                
+
+    def loadImages(self):
+        cwd = os.getcwd()
+        self.createMouseImage(os.path.join(cwd,'data/mouse.png'))
+        self.imageTKHome = self.createImage(os.path.join(cwd,'data/home.png'), 52)
+        self.imageTKCake = self.createImage(os.path.join(cwd,'data/cake.png'), 18)
+        self.imageTKBlock = self.createImage(os.path.join(cwd,'data/block.png'), 22)
+
+    def createImage(self, path, scale):
+        imgCake = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        imgCake = cv2.cvtColor(imgCake, cv2.COLOR_BGRA2RGBA)
+        im = Image.fromarray(imgCake)                               # convert to PIL image
+        im.thumbnail((im.width//scale, im.height//scale))           # resize by PIL
+        return ImageTk.PhotoImage(im) 
+
+    def createMouseImage(self, path):
+        imgCV2 = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        imgCV2 = cv2.cvtColor(imgCV2, cv2.COLOR_BGRA2RGBA)
+        self.rows, self.cols = imgCV2.shape[:2]
+        self.imgMouses['south'] = imgCV2 = self.rotateImage(imgCV2, 0, 0.8)
+        self.imgMouses['east']  = self.rotateImage(imgCV2,  90, 1.0)
+        self.imgMouses['north'] = self.rotateImage(imgCV2, 180, 1.0)
+        self.imgMouses['west']  = self.rotateImage(imgCV2, -90, 1.0)
+        self.imageTKMouse = self.resizeAsTKImg(self.imgMouses['south'])
+
+    def resizeAsTKImg(self, image):                                 # input is CV2 image
+        im = Image.fromarray(image)                                 # convert to PIL image
+        im.thumbnail((im.width//25, im.height//25))                 # resize by PIL
+        return ImageTk.PhotoImage(im)                               # convert to tkimage PhotoImage
+
+    def rotateImage(self, image, angle, scale=1.0):
+        matrix2D = cv2.getRotationMatrix2D(((self.cols-1)/2.0, (self.rows-1)/2.0), angle, scale)
+        imgRotate = cv2.warpAffine(image, matrix2D, (self.cols, self.rows))
+        return imgRotate
+
     def drawImage(self, tkimg, x, y, offsetx, offsety):
         left, top = (x*self.sizeX, y*self.sizeY)  #top-left corner position
         id =  self.canvas.create_image(left+offsetx, top+offsety, anchor='nw', image=tkimg)
@@ -125,7 +127,7 @@ class Maze(ProgramBase):
             self.isHomeDrawn = True
 
     def drawCake(self, x, y):
-        self.drawImage(self.imageTKCake, x, y, 13, 10)
+        self.drawImage(self.imageTKCake, x, y, 13, 9)
     
     def drawBlock(self, x, y):
         self.drawImage(self.imageTKBlock, x, y, 5, 3)
@@ -135,16 +137,6 @@ class Maze(ProgramBase):
         coord_rect = centx-radius, centy-radius, centx+radius, centy+radius
         self.canvas.create_oval(coord_rect, fill=color)
    
-    def resizeAsTKImg(self, image):                     # input is CV2 image
-        im = Image.fromarray(image)                     # convert to PIL image
-        im.thumbnail((im.width//24, im.height//24))     # resize by PIL
-        return ImageTk.PhotoImage(im)                   # convert to tkimage PhotoImage
-
-    def rotateImage(self, image, angle, scale=1.0):
-        matrix2D = cv2.getRotationMatrix2D(((self.cols-1)/2.0, (self.rows-1)/2.0), angle, scale)
-        imgRotate = cv2.warpAffine(image, matrix2D, (self.cols, self.rows))
-        return imgRotate
-
     # override
     def onKey(self, event):
         if event.char == event.keysym or len(event.char) == 1:
@@ -162,7 +154,7 @@ class Maze(ProgramBase):
         self.threadMouse.start()
     
     def funcThread(self, threadName):
-        while not self.threadEventMouse.wait(self.walkSpeed):  # moving for every 200 ms
+        while not self.threadEventMouse.wait(self.walkSpeed):  # moving for every {walkSpeed} second
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
             self.nextStep()
         print('[{0}] exit'.format(threadName))
