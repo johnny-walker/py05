@@ -84,8 +84,8 @@ class Maze(ProgramBase):
     def loadImage(self, path, scale):
         imgCake = cv2.imread(path, cv2.IMREAD_UNCHANGED)
         imgCake = cv2.cvtColor(imgCake, cv2.COLOR_BGRA2RGBA)
-        im = Image.fromarray(imgCake)              # convert to PIL image
-        im.thumbnail((im.width//scale, im.height//scale))     # resize by PIL
+        im = Image.fromarray(imgCake)                               # convert to PIL image
+        im.thumbnail((im.width//scale, im.height//scale))           # resize by PIL
         return ImageTk.PhotoImage(im) 
 
     def loadMap(self, path):
@@ -145,16 +145,6 @@ class Maze(ProgramBase):
         imgRotate = cv2.warpAffine(image, matrix2D, (self.cols, self.rows))
         return imgRotate
 
-    def updateMouseImage(self, image):
-        self.imageTKMouse = self.resizeAsTKImg(image)
-        self.canvas.itemconfig(self.mouseImgID, image=self.imageTKMouse)
-    
-    def updateMousePos(self, pos):
-        x, y = pos
-        offsetx = (x - self.mousePos[0]) * self.sizeX
-        offsety = (y - self.mousePos[1]) * self.sizeY
-        self.canvas.move(self.mouseImgID, offsetx, offsety)
-
     # override
     def onKey(self, event):
         if event.char == event.keysym or len(event.char) == 1:
@@ -178,24 +168,27 @@ class Maze(ProgramBase):
         print('[{0}] exit'.format(threadName))
         self.gameOVer()
 
+    def gameOVer(self):
+        if self.gameFinsihed:
+            messagebox.showinfo(title='Maze', message='Mission Completed')
+
     def nextStep(self):
         state, item = self.mazeMove.moveForward()
         if state:
             itemRoute = self.mazeMove.lastRoute()
+            # check if mouse needs to move backward
             while itemRoute[2] != item[1]:
                 itemRoute = self.mazeMove.popRoute()
                 itemRoute = (self.reverseDir(itemRoute[0]), itemRoute[1], itemRoute[2])
                 self.mouseBackward(itemRoute)
                 itemRoute = self.mazeMove.lastRoute()
+            
+            # check if mouse found the cake
             if self.map.isExit(item[2][0],item[2][1]):
                 self.threadEventMouse.set() # signal the thread loop to quit
                 self.gameFinsihed = True
             else:
                 self.mouseForward(item)
-                
-    def gameOVer(self):
-        if self.gameFinsihed:
-            messagebox.showinfo(title='Maze', message='Mission Completed')
 
     def mouseForward(self, item):
         print (item)
@@ -218,9 +211,24 @@ class Maze(ProgramBase):
         time.sleep(self.walkSpeed)
 
     def reverseDir(self, dir):
-        reverse = {'east':'west', 'west':'east', 'north':'south', 'south': 'north'}
+        reverse = {'east':  'west', 
+                   'west':  'east', 
+                   'north': 'south', 
+                   'south': 'north'}
         return reverse[dir]
-
+    
+    # rotate mouse direction
+    def updateMouseImage(self, image):
+        self.imageTKMouse = self.resizeAsTKImg(image)
+        self.canvas.itemconfig(self.mouseImgID, image=self.imageTKMouse)
+    
+    # move mouse
+    def updateMousePos(self, pos):
+        x, y = pos
+        offsetx = (x - self.mousePos[0]) * self.sizeX
+        offsety = (y - self.mousePos[1]) * self.sizeY
+        self.canvas.move(self.mouseImgID, offsetx, offsety)
+                
 if __name__ == '__main__':
     print(tk.TkVersion)
     program = Maze(tk.Tk())
