@@ -181,6 +181,9 @@ class Maze(ProgramBase):
                 self.gameFinsihed = True
             else:
                 self.mouseForward(item)
+        else:
+            messagebox.showinfo(title='Maze', message='No route to exit, map error')
+            self.threadEventMouse.set()
 
     def mouseForward(self, item):
         print (item)
@@ -203,8 +206,8 @@ class Maze(ProgramBase):
         time.sleep(self.walkSpeed)
 
     def reverseDir(self, dir):
-        reverse = {'east':  'west', 
-                   'west':  'east', 
+        reverse = {'east' : 'west', 
+                   'west' : 'east', 
                    'north': 'south', 
                    'south': 'north'}
         return reverse[dir]

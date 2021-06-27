@@ -3,9 +3,9 @@ class MazeMove():
     def __init__(self, maze):
         self.mouseRoute = []
         self.candidatesStack = []
+        self.visited = []
         self.maze = maze
         self.currentItem = None
-        self.visited = []
 
     def initState(self, x, y):
         # append route item (direction, parent, child)  

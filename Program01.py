@@ -88,15 +88,14 @@ class Pgm05(ProgramBase):
         self.threadEventMouse2.clear()   # reset the thread event
         self.threadMouse2.start()
 
-
     def funcMouse1(self, threadName):
-        while not self.threadEventMouse1.wait(0.1):  # moving for every 100 ms
+        while not self.threadEventMouse1.wait(0.2):  # moving for every 200 ms
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
             self.mouse1Forward()
         print('[{0}] exit'.format(threadName))
     
     def funcMouse2(self, threadName):
-        while not self.threadEventMouse2.wait(0.2):  # moving for every 300 ms
+        while not self.threadEventMouse2.wait(0.15):  # moving for every 150 ms
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
             self.mouse2Forward()
         print('[{0}] exit'.format(threadName))
