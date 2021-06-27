@@ -52,6 +52,7 @@ class Maze(ProgramBase):
 
         self.mouseImgID = 0                     # mouse image widget
         self.mousePos   = (0,0)                 # mouse current position, use to caculate the offset
+
         self.gameFinsihed = False
         self.isHomeDrawn = False
 
@@ -71,8 +72,8 @@ class Maze(ProgramBase):
                     self.drawCake(x,y)
                 elif self.map.isEntry(x,y):
                     self.drawMouse(x,y)
-                #else:
-                #    self.drawDot(x, y, 2, 'yellow')
+                else:
+                    self.drawDot(x, y, 2, 'yellow')
 
     def loadImages(self):
         cwd = os.getcwd()
@@ -92,10 +93,10 @@ class Maze(ProgramBase):
         imgCV2 = cv2.imread(path, cv2.IMREAD_UNCHANGED)
         imgCV2 = cv2.cvtColor(imgCV2, cv2.COLOR_BGRA2RGBA)
         self.rows, self.cols = imgCV2.shape[:2]
-        self.imgMouses['south'] = imgCV2 = self.rotateImage(imgCV2, 0, 0.8)
-        self.imgMouses['east']  = self.rotateImage(imgCV2,  90, 1.0)
-        self.imgMouses['north'] = self.rotateImage(imgCV2, 180, 1.0)
-        self.imgMouses['west']  = self.rotateImage(imgCV2, -90, 1.0)
+        self.imgMouses['south'] = self.rotateImage(imgCV2,   0, 0.8)
+        self.imgMouses['east']  = self.rotateImage(imgCV2,  90, 0.8)
+        self.imgMouses['north'] = self.rotateImage(imgCV2, 180, 0.8)
+        self.imgMouses['west']  = self.rotateImage(imgCV2, -90, 0.8 )
         self.imageTKMouse = self.resizeAsTKImg(self.imgMouses['south'])
 
     def resizeAsTKImg(self, image):                                 # input is CV2 image
@@ -111,12 +112,10 @@ class Maze(ProgramBase):
     def drawImage(self, tkimg, x, y, offsetx, offsety):
         left, top = (x*self.sizeX, y*self.sizeY)  #top-left corner position
         id =  self.canvas.create_image(left+offsetx, top+offsety, anchor='nw', image=tkimg)
-        self.canvas.pack()
         return id
 
     def drawMouse(self, x, y):
         self.mouseImgID = self.drawImage(self.imageTKMouse, x, y, 6, 2)
-        self.canvas.pack()
         self.mazeMove.initState(x,y)
         self.mousePos = (x,y)
 
