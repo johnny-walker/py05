@@ -1,4 +1,4 @@
-# https://www.rs-online.com/designspark/python-tkinter-cn#_Toc61529922
+#https://blog.gtwang.org/programming/python-threading-multithreaded-programming-tutorial/
 import os
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -18,76 +18,106 @@ class MazeThread (threading.Thread):
     def run(self):
         print('[{0}] starts, id={1}'.format(self.name, self.threadID))
         if self.threadID == THREAD_MOUSE_ID :
-            self.owner.funcThread(self.name)
+            self.owner.funcMouse1(self.name)
+        elif self.threadID == THREAD_MOUSE_ID+1 :
+            self.owner.funcMouse2(self.name)
 
 class Pgm05(ProgramBase):
-    threadEventMouse = threading.Event()
-    threadMouse = None
+    threadEventMouse1 = threading.Event()
+    threadEventMouse2 = threading.Event()
+    threadMouse1 = None
+    threadMouse2 = None
     
     def __init__(self, root, path, width=640, height=480):
         super().__init__(root, width, height)
         self.root.title('mouse moving')
         self.canvas = tk.Canvas(self.root, bg = "gray", width=width, height=height)
         self.canvas.pack()
-        self.mousePosX = 50
-        self.mousePosY = 50
+        self.mouse1PosX = 50
+        self.mouse1PosY = 50
+        self.mouse2PosX = 500
+        self.mouse2PosY = 300
 
-        self.imgCV2 = None
+        self.imgCV2 = self.imgCV2_90 = None
         self.rows = 0
         self.cols = 0
-        self.imgTK = self.loadImage('data/mouse.png')
-        self.mouseImgID = self.canvas.create_image(self.mousePosX, self.mousePosY, anchor = 'nw', image = self.imgTK)
+        
+        # create 2 mouses
+        self.loadImage('data/mouse.png')
+        self.mouse1ImgID = self.canvas.create_image(self.mouse1PosX, self.mouse1PosY, anchor = 'nw', image = self.imgTK90)
+        self.mouse2ImgID = self.canvas.create_image(self.mouse2PosX, self.mouse2PosY, anchor = 'nw', image = self.imgTK)
         self.root.update()
     
     def loadImage(self, path):
         img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-        self.imgCV2 = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
-        self.rows, self.cols = self.imgCV2.shape[:2]
-        self.rotateImage(90, 0.8)
-        return self.resizeAsTKImg()
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+        self.rows, self.cols = img.shape[:2]
+        # create 2 TK images
+        im = self.rotateImage(img, 0, 0.8)
+        self.imgTK = self.resizeAsTKImg(im)
+        im = self.rotateImage(img, 90, 0.8)
+        self.imgTK90 = self.resizeAsTKImg(im)
 
-    def resizeAsTKImg(self):
-        im = Image.fromarray(self.imgCV2)               # convert to pillow image fomrat
+    def resizeAsTKImg(self, img):
+        im = Image.fromarray(img)               # convert to pillow image fomrat
         im.thumbnail((im.width//12, im.height//12))     # resize by pillow
         return ImageTk.PhotoImage(im)                   # convert to tkinter image
 
-    def rotateImage(self, angle, scale=1.0):
+    def rotateImage(self, img, angle, scale=1.0):
         matrix2D = cv2.getRotationMatrix2D(((self.cols-1)/2.0, (self.rows-1)/2.0), angle, scale)
-        self.imgCV2 = cv2.warpAffine(self.imgCV2, matrix2D, (self.cols, self.rows))
+        return cv2.warpAffine(img, matrix2D, (self.cols, self.rows))
 
     # override
     def onKey(self, event):
         if event.char == event.keysym or len(event.char) == 1:
             if event.keysym == 'Escape':
-                self.threadEventMouse.set() # signal the thread loop to quit
+                self.threadEventMouse1.set() # signal the thread loop to quit
+                self.threadEventMouse2.set() # signal the thread loop to quit
                 print("key Escape") 
                 self.root.destroy()
             else: # any other key
-                if not self.threadMouse:
+                if not self.threadMouse1 and not self.threadMouse2:
                     self.startThread()
     
     def startThread(self):
-        self.threadMouse = MazeThread(THREAD_MOUSE_ID, "Mouse Thread", self)
-        self.threadEventMouse.clear()   # reset the thread event
-        self.threadMouse.start()
+        self.threadMouse1 = MazeThread(THREAD_MOUSE_ID, "Mouse1 Thread", self)
+        self.threadEventMouse1.clear()   # reset the thread event
+        self.threadMouse1.start()
     
-    
-    def funcThread(self, threadName):
-        while not self.threadEventMouse.wait(0.1):  # moving for every 300 ms
+        self.threadMouse2 = MazeThread(THREAD_MOUSE_ID+1, "Mouse2 Thread", self)
+        self.threadEventMouse2.clear()   # reset the thread event
+        self.threadMouse2.start()
+
+
+    def funcMouse1(self, threadName):
+        while not self.threadEventMouse1.wait(0.1):  # moving for every 100 ms
             #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
-            self.mouseForward()
+            self.mouse1Forward()
         print('[{0}] exit'.format(threadName))
     
-    def mouseForward(self):
-        if self.mousePosX + 50 < self.root.width - 100:
+    def funcMouse2(self, threadName):
+        while not self.threadEventMouse2.wait(0.2):  # moving for every 300 ms
+            #print ('[{0}][{1}] keep moving'.format(threadName, time.time()))
+            self.mouse2Forward()
+        print('[{0}] exit'.format(threadName))
+    
+    def mouse1Forward(self):
+        if self.mouse1PosX + 50 < self.root.width - 100:
             offsetx = 50  
-            self.mousePosX += 50
+            self.mouse1PosX += 50
         else:
-            offsetx = 50 - self.mousePosX 
-            self.mousePosX = 50
-
-        print (self.mousePosX, offsetx)
-        self.canvas.move(self.mouseImgID, offsetx, 0)     
+            offsetx = 50 - self.mouse1PosX 
+            self.mouse1PosX = 50
+        self.canvas.move(self.mouse1ImgID, offsetx, 0)     
+    
+    def mouse2Forward(self):
+        if self.mouse2PosY + 30 < self.root.height - 100:
+            offsety = 30  
+            self.mouse2PosY += 30
+        else: 
+            offsety = 30 - self.mouse2PosY 
+            self.mouse2PosY = 30
+        self.canvas.move(self.mouse2ImgID, 0, offsety)     
 
 
 if __name__ == '__main__':
